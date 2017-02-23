@@ -60,8 +60,13 @@ print("X_valid: ", X_valid.shape)
 from keras.models import Sequential
 from keras.layers.core import Dense, Activation, Flatten
 
+dout_rate = 0.4
 model = Sequential()
-model.add(Flatten(input_shape=(32, 32, 3)))
+model.add(Convolution2D(32, 3, 3, input_shape=(32, 32, 3)))
+model.add(MaxPooling2D((2, 2)))
+model.add(Dropout(dout_rate))
+model.add(Activation('relu'))
+model.add(Flatten())
 model.add(Dense(128))
 model.add(Activation('relu'))
 model.add(Dense(43))
