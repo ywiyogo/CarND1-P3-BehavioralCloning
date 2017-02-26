@@ -3,10 +3,14 @@
 # Descriṕtion: Model for training data
 
 import numpy as np
+import csv, cv2
 import pandas
+import pickle
+from os.path import isfile
+from helper_functions import show_histogram
 from sklearn.model_selection import train_test_split
 from keras.layers import Dense, Flatten, Input, Cropping2D, Convolution2D
-from keras.layers import MaxPooling2D, Activation
+from keras.layers import MaxPooling2D, Activation, Dropout, Lambda
 from keras.models import Model, Sequential
 
 
@@ -16,45 +20,108 @@ from keras.models import Model, Sequential
 # reading CSV file with different format can be done by using pandas lib.
 # numpy.loattxt() can only read if the format of all data are the same
 csv_file = "./TrainingData/driving_log.csv"
-with open(csv_file, "r") as file:
-    cols = ['center_img', 'left_img', 'right_img', 'steering_angle',
-            'throttle', 'break', 'speed']
-    driving_data = pandas.read_csv(file, names=cols)
-    print("Driving log: ", driving_data.shape)
 
+if not isfile('augmented_data.p'):
+    lines = []
+    with open(csv_file) as file:
+        # cols = ['center_img', 'left_img', 'right_img', 'steering_angle',
+        #         'throttle', 'break', 'speed']
+        # driving_data = pandas.read_csv(file, names=cols)
+        # print("Driving log: ", driving_data.shape)
+        reader = csv.reader(file)
+        for line in reader:
+            lines.append(line)
 # image from the simulator: 160x320 pixel
 # Input: images from the center camera of the car.
 # Output: a new steering angle for the car.
 
-# Split Training data to provide the validation data
-X_train, X_valid, y_train, y_valid = train_test_split(
-    driving_data['center_img'], driving_data['steering_angle'], test_size=0.2,
-    random_state=0)
-print("X_train: ", X_train.shape)
-print("X_valid: ", X_valid.shape)
+    images = []
+    steer_angles = []
+    for line in lines:
+        path = line[0]
+        image = cv2.imread(path)
+        images.append(image)
+        measurement = float(line[3])
+        steer_angles.append(measurement)
+        if(measurement != 0.0):
+            image_flipped = np.fliplr(image)
+            measurement_flipped = -measurement
+            images.append(image_flipped)
+            steer_angles.append(measurement_flipped)
 
-# Extend the data
-# ---------------------------------
-# Simulationg different position using multiple cameras
+    X_train = np.array(images)
+    y_train = np.array(steer_angles)
+    # Split Training data to provide the validation data
+    # X_train, X_valid, y_train, y_valid = train_test_split(
+    #     driving_data['center_img'], driving_data['steering_angle'], test_size=0.2,
+    #     random_state=0)
+    print("X_train: ", X_train.shape)
+    #print("X_valid: ", X_valid.shape)
 
-for i in range(driving_data.shape[0]):
-    # create adjusted steering measurements for the side camera images
-    steering_center = driving_data['steering_angle'][i]
-    correction = 0.2  # this is a parameter to tune
-    steering_left = steering_center + correction
-    steering_right = steering_center - correction
-    # add images and angles to data set
-    X_train.extend(driving_data['center_img'][i], driving_data['left_img'][i],
-                   driving_data['right_img'][i])
-    y_train.extend(steering_center, steering_left, steering_right)
+    #show_histogram(y_train, "Histogram of the provided training \
+    #               data set")
+    # Extend the data
+    # ---------------------------------
+    # Simulationg different position using multiple cameras
 
-print("Dataset after extending the diffrent position using multiple camera")
-print("X_train: ", X_train.shape)
-print("X_valid: ", X_valid.shape)
+    for i in range(round(len(lines) / 2)):
+        # create adjusted steering measurements for the side camera images
+        steering_center = float(lines[i][3])
+        if(steering_center != 0.0):
+            # Example of image flipping
+            image_flipped = np.fliplr(image)
+            measurement_flipped = -measurement
 
-# Example of image flipping
-# image_flipped = np.fliplr(image)
-# measurement_flipped = -measurement
+            correction = 0.2  # this is a parameter to tune
+            steering_left = steering_center + correction
+            if(steering_left != 0.0):
+                path_left = lines[i][1]
+                image_left = cv2.imread(path_left)
+                X_train = np.concatenate((X_train, [image_left]), axis=0)
+                y_train = np.concatenate((y_train, [steering_left]), axis=0)
+
+            steering_right = steering_center - correction
+            if(steering_right != 0.0):
+                path_right = lines[i][2]
+                image_right = cv2.imread(path_right)
+                # add images and angles to data set
+                X_train = np.concatenate((X_train, [image_right]), axis=0)
+                y_train = np.concatenate((y_train, [steering_right]), axis=0)
+
+    # print("Dataset after extending the diffrent position using multiple camera")
+    print("X_train: ", X_train.shape)
+
+
+    #save to pickle
+    tdata = {}
+    tdata['features'] = X_train
+    tdata['measurements'] = y_train
+    pickle.dump(tdata, open("augmented_data.p", "wb"))
+
+else:
+    with open('augmented_data.p', 'rb') as f:
+        data = pickle.load(f)
+        # TODO: Load the feature data to the variable X_train
+        X_train = tdata['features']
+        # TODO: Load the label data to the variable y_train
+        y_train = tdata['measurements']
+
+show_histogram(y_train, "Histogram of the provided training\
+                   data set")
+def simple_regression_network():
+    """
+    Simple Regression network for testing
+    """
+    channel, height, width = 3, 160, 320
+    model = Sequential()
+    model.add(Lambda(lambda x: (x / 255.0) - 0.5,
+                     input_shape= (height, width, channel)))
+    model.add(Flatten())
+    model.add(Dense(1))
+    model.compile(loss="mse", optimizer="adam")
+    model.fit(X_train, y_train, validation_split=0.2, shuffle=True, nb_epoch=2)
+    model.save("model1.h5")
+    return model
 
 # -------------------------------------------
 # Deep Learning Model Architecture with Keras
@@ -64,33 +131,61 @@ print("X_valid: ", X_valid.shape)
 # It  contains  eight  learned  layers:
 # five  convolutional  and  three  fully-connected.
 
-dout_rate = 0.4
-model = Sequential()
-# crop the images
-# set up cropping2D layer 160x320 -> 90x300 pixels
-model.add(Cropping2D(cropping=((50, 20), (10, 10)), input_shape=(160, 320, 3)))
-# 1 conv filter 11x11x3, stride: 4
-model.add(Convolution2D(32, 3, 3, input_shape=(111, 300, 3)))
-model.add(MaxPooling2D((2, 2)))
-model.add(Dropout(dout_rate))
-model.add(Activation('relu'))
-# 1 conv filter 5x5xn, stride: 2
+
+def imageNet():
+    dropout_rate = 0.4
+    channel, height, width = 3, 160, 320
+    model = Sequential()
+    # crop the images
+    # set up cropping2D layer 160x320 -> 97x305 pixels
+    model.add(Cropping2D(cropping=((43, 20), (7, 8)),
+                         input_shape=(height, width, channel)))
+    # Normalize
+    #model.add(Lambda(lambda x: x / 128 - 1.,
+    #                 input_shape=(channel, 97, 305),
+    #                 output_shape=(channel, 97, 305)))
+    # 1 conv filter 11x11x3, stride: 2:
+    # height: (97-11)/2 +1 = 44; weight: (305-11)/2 +1= 148
+    model.add(Convolution2D(96, 11, 11, subsample=(2, 2), border_mode='valid'))
+    model.add(MaxPooling2D((2, 2)))
+    model.add(Activation('relu'))
+    # Output: 22x74x96
+
+    # conv2 256 filter 5x5x48, stride: 1
+    # height: (22-5)/1 + 1= 18, (148-5)+1 = 144
+    model.add(Convolution2D(256, 5, 5, border_mode='valid'))
+    model.add(MaxPooling2D((2, 2)))
+    model.add(Activation('relu'))
+    # Output: 9x72x256
+
+    # 3rd conv 384 filter 5x5x256, stride: 1
+    # h: 9-5+1= 5, w: 72-5+1= 68
+    model.add(Convolution2D(384, 5, 5, border_mode='valid'))
+    model.add(Activation('relu'))
+    # output: 5x68x384
+
+    # FC
+    model.add(Flatten())
+    model.add(Dense(7000))
+    model.add(Dropout(dropout_rate))
+    model.add(Activation('relu'))
+
+    model.add(Dense(2000))
+    model.add(Dropout(dropout_rate))
+    model.add(Activation('relu'))
+
+    model.add(Dense(1))
+
+    model.compile(optimizer="adam", loss="mse")
+
+    model.save('model2.h5')  # creates a HDF5 file 'my_model.h5'
+    return model
 
 
-# 1 conv filter 5x5xm, stride: 2
-
-
-# 1 conv filter 3x3xm, stride:1
-
-# FC
-model.add(Flatten())
-model.add(Dense(128))
-model.add(Activation('relu'))
-model.add(Dense(43))
-model.add(Activation('softmax'))
-
-
-model.save('my_model.h5')  # creates a HDF5 file 'my_model.h5'
-del model  # deletes the existing model
+def end2endCNN():
+    model = Sequential()
+    return model
 
 # > python drive.py model.h5 <output_img_dir>
+
+simple_regression_network()
