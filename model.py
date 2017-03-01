@@ -56,8 +56,7 @@ if not isfile('augmented_data.p'):
     print("X_train: ", X_train.shape)
     #print("X_valid: ", X_valid.shape)
 
-    show_histogram(y_train, "Histogram of the provided training \
-    #               data set")
+    #show_histogram(y_train, "Histogram of the provided training data set")
     # Extend the data
     # ---------------------------------
     # Simulationg different position using multiple cameras
@@ -84,6 +83,10 @@ if not isfile('augmented_data.p'):
             path_right = get_relative_path(lines[i][2])
             image_right = cv2.imread(path_right)
             # add images and angles to data set
+            if image_right is None:
+                print("Warning image right is None object")
+            if isinstance(image_right, str):
+                print("Warning image right is string")
             augmented_imgs.append(image_right)
             augmented_meas.append(path_right)
 
@@ -108,8 +111,7 @@ else:
         # TODO: Load the label data to the variable y_train
         y_train_augmented = data['measurements']
 
-show_histogram(y_train, "Histogram of the provided training\
-                   data set")
+#show_histogram(y_train, "Histogram of the provided training data set")
 
 def simple_regression_network(epoch=2 ):
     """
