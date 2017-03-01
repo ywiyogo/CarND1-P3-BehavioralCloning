@@ -66,25 +66,26 @@ if not isfile('augmented_data.p'):
     for i in range(len(lines)):
         # create adjusted steering measurements for the side camera images
         steering_center = float(lines[i][3])
-        # Example of image flipping
-        image_flipped = np.fliplr(images[i])
-        meas_flipped = -measurements[i]
-        augmented_imgs.append(image_flipped)
-        augmented_meas.append(meas_flipped)
+        if steering_center != 0.0:
+            # Example of image flipping
+            image_flipped = np.fliplr(images[i])
+            meas_flipped = -measurements[i]
+            augmented_imgs.append(image_flipped)
+            augmented_meas.append(meas_flipped)
 
-        correction = 0.2  # this is a parameter to tune
-        steering_left = steering_center + correction
-        path_left = get_relative_path(lines[i][1])
-        image_left = cv2.imread(path_left)
-        augmented_imgs.append(image_left)
-        augmented_meas.append(steering_left)
+            correction = 0.2  # this is a parameter to tune
+            steering_left = steering_center + correction
+            path_left = get_relative_path(lines[i][1])
+            image_left = cv2.imread(path_left)
+            augmented_imgs.append(image_left)
+            augmented_meas.append(steering_left)
 
-        steering_right = steering_center - correction
-        path_right = get_relative_path(lines[i][2])
-        image_right = cv2.imread(path_right)
-        # add images and angles to data set
-        augmented_imgs.append(image_right)
-        augmented_meas.append(path_right)
+            steering_right = steering_center - correction
+            path_right = get_relative_path(lines[i][2])
+            image_right = cv2.imread(path_right)
+            # add images and angles to data set
+            augmented_imgs.append(image_right)
+            augmented_meas.append(path_right)
 
     X_train_augmented = np.concatenate((X_train, augmented_imgs), axis=0)
     y_train_augmented = np.concatenate((y_train, augmented_meas), axis=0)
