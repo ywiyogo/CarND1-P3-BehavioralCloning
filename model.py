@@ -3,14 +3,15 @@
 # Descriṕtion: Model for training data
 
 import numpy as np
-import csv, cv2
+import cv2
+import csv
 import pandas
 import pickle
 from os.path import isfile
 from helper_functions import show_histogram, get_relative_path
 from sklearn.model_selection import train_test_split
-from keras.layers import Dense, Flatten, Input, Cropping2D, Convolution2D
-from keras.layers import MaxPooling2D, Activation, Dropout, Lambda
+from keras.layers import Dense, Flatten, Cropping2D, Convolution2D
+from keras.layers import MaxPooling2D, Dropout, Lambda
 from keras.models import Model, Sequential
 
 
@@ -36,6 +37,7 @@ if not isfile('augmented_data.p'):
 # Output: a new steering angle for the car.
 
     images = []
+    left_image_path, right_image_path = [],[]
     measurements = []
     for line in lines:
         curr_path = get_relative_path(line[0])
@@ -44,8 +46,10 @@ if not isfile('augmented_data.p'):
             images.append(image)
             steer_angle = float(line[3])
             measurements.append(steer_angle)
+            left_image_path.append(get_relative_path(line[1]))
+            right_image_path.append(get_relative_path(line[2]))
         else:
-            print("Warning: image data is empty! Check the filename!")
+            print("Warning: image data is empty! Check the filename! ", curr_path)
 
     X_train = np.array(images)
     y_train = np.array(measurements)
@@ -54,6 +58,7 @@ if not isfile('augmented_data.p'):
     #     driving_data['center_img'], driving_data['steering_angle'], test_size=0.2,
     #     random_state=0)
     print("X_train: ", X_train.shape)
+
     #print("X_valid: ", X_valid.shape)
 
     #show_histogram(y_train, "Histogram of the provided training data set")
@@ -62,41 +67,49 @@ if not isfile('augmented_data.p'):
     # Simulationg different position using multiple cameras
     augmented_imgs, augmented_meas = [], []
 
-    for i in range(len(lines)):
+    for i in range(len(images)):
         # create adjusted steering measurements for the side camera images
-        steering_center = float(lines[i][3])
+        steering_center = measurements[i]
         if steering_center != 0.0:
             # Example of image flipping
-            image_flipped = np.fliplr(images[i])
-            meas_flipped = -measurements[i]
-            augmented_imgs.append(image_flipped)
-            augmented_meas.append(meas_flipped)
+            if images[i] is not None:
+                image_flipped = np.fliplr(images[i])
+                meas_flipped = -measurements[i]
+                augmented_imgs.append(image_flipped)
+                augmented_meas.append(meas_flipped)
+            else:
+                print("Warning image is None object, cannot be flipped")
 
             correction = 0.2  # this is a parameter to tune
             steering_left = steering_center + correction
-            path_left = get_relative_path(lines[i][1])
-            image_left = cv2.imread(path_left)
-            augmented_imgs.append(image_left)
-            augmented_meas.append(steering_left)
+            image_left = cv2.imread(left_image_path[i])
+            if isinstance(image_left, str):
+                print("Warning image right is string")
+            if image_left is not None:
+                augmented_imgs.append(image_left)
+                augmented_meas.append(steering_left)
+                print("Founded image left")
+            else:
+                print("Warning image right is None object")
 
             steering_right = steering_center - correction
-            path_right = get_relative_path(lines[i][2])
-            image_right = cv2.imread(path_right)
+            image_right = cv2.imread(right_image_path[i])
             # add images and angles to data set
-            if image_right is None:
-                print("Warning image right is None object")
             if isinstance(image_right, str):
                 print("Warning image right is string")
-            augmented_imgs.append(image_right)
-            augmented_meas.append(path_right)
+            if image_right is not None:
+                augmented_imgs.append(image_right)
+                augmented_meas.append(steering_right)
+                print("Founded image right")
+            else:
+                print("Warning image right is None object")
 
     X_train_augmented = np.concatenate((X_train, augmented_imgs), axis=0)
     y_train_augmented = np.concatenate((y_train, augmented_meas), axis=0)
     # print("Dataset after extending the diffrent position using multiple camera")
     print("y_train_augmented: ", X_train_augmented.shape)
 
-
-    #save to pickle
+    # save to pickle
     tdata = {}
     tdata['features'] = X_train_augmented
     tdata['measurements'] = y_train_augmented
@@ -111,7 +124,11 @@ else:
         # TODO: Load the label data to the variable y_train
         y_train_augmented = data['measurements']
 
-#show_histogram(y_train, "Histogram of the provided training data set")
+#show_histogram(y_train_augmented, "Histogram of the provided training data set")
+
+# -------------------------------------------
+# Deep Learning Model Architectures with Keras
+# -------------------------------------------
 
 def simple_regression_network(epoch=2 ):
     """
@@ -125,14 +142,49 @@ def simple_regression_network(epoch=2 ):
     model.add(Flatten())
     model.add(Dense(1))
     model.compile(loss="mse", optimizer="adam")
-    model.fit(X_train_augmented, y_train_augmented, validation_split=0.2, shuffle=True, nb_epoch=epoch)
+    model.fit(X_train_augmented, y_train_augmented, validation_split=0.2,
+              shuffle=True, nb_epoch=epoch)
     modelname = "model1_" + str(epoch) + ".h5"
     model.save(modelname)
+    print("Model saved in ", modelname)
     return model
 
-# -------------------------------------------
-# Deep Learning Model Architecture with Keras
-# -------------------------------------------
+
+def nvidia_net(epoch=5):
+    """
+    Implement the nvidia CNN:
+    https://images.nvidia.com/content/tegra/automotive/images/2016/solutions/pdf/end-to-end-dl-using-px.pdf
+    """
+    #channel, height, width = 3, 66, 200
+    channel, height, width = 3, 160, 320
+    print("Starting NVidia deep learning...")
+    model = Sequential()
+    #cropping image from (up, down), (left,right)
+    model.add(Cropping2D(cropping=((50, 20), (10, 10)),
+                         input_shape=(height, width, channel)))
+    model.add(Lambda(lambda x: (x / 255.0) - 0.5))
+    model.add(Convolution2D(24, 5, 5, subsample=(2, 2), border_mode='valid',
+                            activation="relu"))
+    model.add(Convolution2D(36, 5, 5, subsample=(2, 2), border_mode='valid',
+                            activation="relu"))
+    model.add(Convolution2D(48, 5, 5, subsample=(2, 2), border_mode='valid',
+                            activation="relu"))
+    model.add(Convolution2D(64, 3, 3, border_mode='valid',
+                            activation="relu"))
+    model.add(Convolution2D(64, 3, 3, border_mode='valid',
+                            activation="relu"))
+    model.add(Flatten())
+    model.add(Dropout(0.2))
+    model.add(Dense(100))
+    model.add(Dense(50))
+    model.add(Dense(1))
+
+    model.compile(optimizer="adam", loss="mse")
+    model.fit(X_train_augmented, y_train_augmented, validation_split=0.2,
+              shuffle=True, nb_epoch=epoch)
+    model.save('model_nvidia.h5')  # creates a HDF5 file 'my_model.h5'
+    print("Model saved in model_nvidia.h5")
+    return model
 # I use ImageNet like model:
 # http://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks.pdf
 # It  contains  eight  learned  layers:
@@ -187,11 +239,7 @@ def imageNet(epoch=5):
     return model
 
 
-def end2endCNN():
-    model = Sequential()
-    return model
-
 # > python drive.py model.h5 <output_img_dir>
 
 #simple_regression_network(3)
-#imageNet()
+#nvidia_net()
