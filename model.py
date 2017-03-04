@@ -1,6 +1,8 @@
-# model.py
-# Author: YWiyogo
-# Descriṕtion: Model for training data
+"""
+model.py
+Author: YWiyogo
+Descriṕtion: Model for training data
+"""
 
 import numpy as np
 import cv2
@@ -72,6 +74,7 @@ def generator(samples, batch_size=32):
 
             X_train_augmented = np.array(images)
             y_train_augmented = np.array(steer_angles)
+            print("X_train_augmented shape: ", X_train_augmented.shape)
             yield shuffle(X_train_augmented, y_train_augmented)
 
 
@@ -90,8 +93,9 @@ with open(csv_file) as file:
 train_samples, validation_samples = train_test_split(lines, test_size=0.2)
 print("Number of train samples: ", len(train_samples))
 print("Number of validation samples: ", len(validation_samples))
-train_generator = generator(train_samples, batch_size=32)
-validation_generator = generator(validation_samples, batch_size=32)
+batchsize = 79  # 5767 / 79 = 73
+train_generator = generator(train_samples, batchsize)
+validation_generator = generator(validation_samples, batchsize)
 
 
 #show_histogram(y_train_augmented, "Histogram of the provided training data set")
@@ -144,19 +148,20 @@ def nvidia_net(epoch=5):
     model.add(Convolution2D(64, 3, 3, subsample=(2, 2), border_mode='valid',
                             activation="relu"))
     model.add(Flatten())
-    model.add(Dropout(0.2))
-    model.add(Dense(100))
+    model.add(Dense(300))
+    model.add(Dropout(0.4))
     model.add(Dense(50))
     model.add(Dense(1))
 
     model.compile(optimizer="adam", loss="mse")
     # model.fit(X_train_augmented, y_train_augmented, validation_split=0.2,
     #           shuffle=True, nb_epoch=epoch)
+    print("Samples/epoch: ", len(train_samples))
     model.fit_generator(train_generator, samples_per_epoch=len(train_samples),
                         validation_data=validation_generator,
                         nb_val_samples=len(validation_samples), nb_epoch=epoch)
-
-    model.save('model_nvidia.h5')  # creates a HDF5 file 'my_model.h5'
+    modelname = "model_nvidia_" + str(epoch) + ".h5"
+    model.save(modelname)  # creates a HDF5 file 'my_model.h5'
     print("Model saved in model_nvidia.h5")
     return model
 # I use ImageNet like model:
@@ -218,4 +223,4 @@ def image_net(epoch=5):
 # > python drive.py model.h5 <output_img_dir>
 
 #simple_regression_network(3)
-nvidia_net()
+nvidia_net(10)
