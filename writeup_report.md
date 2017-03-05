@@ -14,8 +14,8 @@ The goals / steps of this project are the following:
 
 [//]: # (Image References)
 
-[image1]: ./examples/placeholder.png "Model Visualization"
-[image2]: ./examples/placeholder.png "Grayscaling"
+[image1]: ./examples/overfitting_e12_b230_s11918 "Model Visualization"
+[image2]: ./examples/overfitting_e15_b230_s10580.png "Grayscaling"
 [image3]: ./examples/placeholder_small.png "Recovery Image"
 [image4]: ./examples/placeholder_small.png "Recovery Image"
 [image5]: ./examples/placeholder_small.png "Recovery Image"
@@ -91,6 +91,9 @@ To combat the overfitting, first I try to visualize the loss and the validation 
 
 With the model is fixed, I can increase the batch size and lowering the learning rate to reduce the overfitting. This approach has to be compensated by increasing the epoch. Compared to the second project which I used high numbers of epoch, in this project I observed that mostly if epoch is more than 10, the training is going to be overfitting.
 
+![alt text][image1]
+![alt text][image2]
+
 After I collected more than 11000 samples, I can observe that the overfitting happens normally after 5th epoch. Several experiments shows me that the `shuffle` function plays a significant role in this case.
 
 The final step was to run the simulator to see how well the car was driving around track one. There were a few spots where the vehicle fell off the track, to improve the driving behavior in these cases, I record new training data on the spot where the vehicle stuck or fell off the track.
@@ -110,7 +113,7 @@ To capture good driving behavior, I first recorded two laps on track one using c
 
 ![alt text][image2]
 
-I then recorded the vehicle recovering from the left side and right sides of the road back to center so that the vehicle would learn to .... These images show what a recovery looks like starting from ... :
+I then recorded the vehicle recovering from the left side and right sides of the road back to center so that the vehicle would learn to drive back to the center of the road. These images show what a recovery looks like starting from ... :
 
 ![alt text][image3]
 ![alt text][image4]
@@ -118,16 +121,16 @@ I then recorded the vehicle recovering from the left side and right sides of the
 
 Then I repeated this process on track two in order to get more data points.
 
-To augment the data sat, I also flipped images and angles thinking that this would ... For example, here is an image that has then been flipped:
+To augment the data set, I also flipped images and angles thinking that this would generalize the learning. For example, here is an image that has then been flipped:
 
 ![alt text][image6]
 ![alt text][image7]
 
 Etc ....
 
-After the collection process, I had X number of data points. I then preprocessed this data by ...
+After the collection process, I had 14898 number of data points. Then, I cut the data points to 14000. Afterwards, I preprocessed this data by cropping the border (top, bottom, left, right) in order to eliminate redundant information.
 
 
-I finally randomly shuffled the data set and put Y% of the data into a validation set. 
+I finally randomly shuffled the data set and put 20% of the data into a validation set. 
 
-I used this training data for training the model. The validation set helped determine if the model was over or under fitting. The ideal number of epochs was Z as evidenced by ... I used an adam optimizer so that manually training the learning rate wasn't necessary.
+I used this training data for training the model. The validation set helped determine if the model was over or under fitting. The ideal number of epochs was Z as evidenced by ... I used an adam optimizer and I was tuning the learning rate.
