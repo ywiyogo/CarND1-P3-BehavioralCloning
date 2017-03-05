@@ -18,3 +18,12 @@ def show_histogram(data, title="Histogram of the datasets"):
 def get_relative_path(abs_path):
     filename = abs_path.split("/")[-1]
     return "../p3_training_data/IMG/" + filename
+
+def plot_history(history):
+    plt.plot(history['loss'])
+    plt.plot(history['val_loss'])
+    plt.title('Model History')
+    plt.ylabel('MSE loss')
+    plt.xlabel('epoch')
+    plt.legend(['training', 'validation'], loc='upper right')
+    plt.show()
