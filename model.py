@@ -204,17 +204,17 @@ def image_net(dropout_rate):
 # Output: a new steering angle for the car.
 print("Collected dataset: ", len(lines))
 # cut the samples to 14000
-train_samples, validation_samples = train_test_split(lines, test_size=0.25)
+train_samples, validation_samples = train_test_split(lines, test_size=0.15)
 
 print("Number of train samples: ", len(train_samples))
 print("Number of validation samples: ", len(validation_samples))
 # 5767 / 79 = 73
 # 7024
-batchsize = 320
+batchsize = 300
 train_generator = generator(train_samples, batchsize)
 validation_generator = generator(validation_samples, batchsize)
 
-epoch = 30
+epoch = 20
 
 exec_model = nvidia_net(0.5, lrate=0.0007)
 
