@@ -9,9 +9,10 @@ import cv2
 import csv
 import pickle
 import time
+import sys
 from sklearn.utils import shuffle
 from os.path import isfile
-from helper_functions import get_relative_path
+from helper_functions import show_histogram, get_relative_path
 from sklearn.model_selection import train_test_split
 from keras.layers import Dense, Flatten, Cropping2D, Convolution2D
 from keras.layers import MaxPooling2D, Dropout, Lambda
@@ -29,7 +30,11 @@ csv_file = "../p3_training_data/driving_log.csv"
 
 def generator(samples, batch_size=32):
     """
-    Generator function to create the image and augmented images
+    Generator function to create the image and augmented images.
+    From each given samples this generator will generate two samples:
+    1. if the steering angle != 0.0 than it append the given center 
+    image and its flipped image
+    2. else: append the images from lef and right camera
     """
     num_samples = len(samples)
     while 1:  # Loop forever so the generator never terminates
@@ -39,26 +44,22 @@ def generator(samples, batch_size=32):
             images = []
             steer_angles = []
             for batch_sample in batch_samples:
-                rand = np.random.randint(3)
+
                 center_image = cv2.imread(get_relative_path(batch_sample[0]))
                 steering_center = float(batch_sample[3])
                 if center_image is None:
                     print("Warning image is None object, cannot be flipped ",
                           get_relative_path(batch_sample[0]))
                     continue
-                if rand == 0:
-                    images.append(center_image)
-                    steer_angles.append(steering_center)
-                elif rand == 1:
-                    # image flipping
-                    image_flipped = np.fliplr(center_image)
-                    meas_flipped = -steering_center
-                    images.append(image_flipped)
-                    steer_angles.append(meas_flipped)
-                else:
-                    # Using side cameras with random number
+                rand = 0
+                if steering_center == 0.0:
+                    # to avoid overfitting for angle 0, I utilize 3 random numbr
+                    rand = np.random.randint(3)
                     correction = 0.2  # this is a parameter to tune
-                    if np.random.randint(2) == 0:
+                    if rand == 0:
+                        images.append(center_image)
+                        steer_angles.append(steering_center)
+                    elif rand == 1:
                         steering_left = steering_center + correction
                         image_left = cv2.imread(get_relative_path(batch_sample[1]))
                         if image_left is not None:
@@ -76,24 +77,22 @@ def generator(samples, batch_size=32):
                             steer_angles.append(steering_right)
                         else:
                             print("Warning image right is None object")
+                else:
+                    if np.random.randint(2) == 0:
+                        images.append(center_image)
+                        steer_angles.append(steering_center)
+                    else:
+                        # image flipping
+                        image_flipped = np.fliplr(center_image)
+                        meas_flipped = -steering_center
+                        images.append(image_flipped)
+                        steer_angles.append(meas_flipped)
 
             X_train_augmented = np.array(images)
             y_train_augmented = np.array(steer_angles)
+            
             # print("X_train_augmented shape: ", X_train_augmented.shape)
             yield shuffle(X_train_augmented, y_train_augmented)
-
-
-lines = []
-with open(csv_file) as file:
-    # cols = ['center_img', 'left_img', 'right_img', 'steering_angle',
-    #         'throttle', 'break', 'speed']
-    # driving_data = pandas.read_csv(file, names=cols)
-    # print("Driving log: ", driving_data.shape)
-    reader = csv.reader(file)
-    for line in reader:
-        lines.append(line)
-
-
 
 #show_histogram(y_train_augmented, "Histogram of the provided training data set")
 
@@ -129,14 +128,10 @@ def nvidia_net(dropout_rate, lrate=0.001):
     model.add(Convolution2D(64, 3, 3, subsample=(1, 1), border_mode='valid',
                             activation="relu"))
     model.add(Flatten())
-    model.add(Dense(1164, activation='relu'))
     model.add(Dropout(dropout_rate))
     model.add(Dense(500, activation='relu'))
-    model.add(Dropout(dropout_rate))
     model.add(Dense(100, activation='relu'))
-    model.add(Dropout(dropout_rate))
     model.add(Dense(50, activation='relu'))
-    model.add(Dropout(dropout_rate))
     model.add(Dense(10, activation='relu'))
     model.add(Dense(1))
 
@@ -202,30 +197,44 @@ def image_net(dropout_rate):
 # image from the simulator: 160x320 pixel
 # Input: images from the center camera of the car.
 # Output: a new steering angle for the car.
-print("Collected dataset: ", len(lines))
-# cut the samples to 14000
-train_samples, validation_samples = train_test_split(lines, test_size=0.15)
 
-print("Number of train samples: ", len(train_samples))
-print("Number of validation samples: ", len(validation_samples))
-# 5767 / 79 = 73
-# 7024
-batchsize = 300
+lines = []
+with open(csv_file) as file:
+    # cols = ['center_img', 'left_img', 'right_img', 'steering_angle',
+    #         'throttle', 'break', 'speed']
+    # driving_data = pandas.read_csv(file, names=cols)
+    # print("Driving log: ", driving_data.shape)
+    reader = csv.reader(file)
+    for line in reader:
+        lines.append(line)
+
+print("Collected cvs dataset: ", len(lines))
+train_samples, validation_samples = train_test_split(lines, test_size=0.35)
+# My strategy is to generate each line with 2 samples
+num_tsamples = len(train_samples)
+num_vsamples = len(validation_samples)
+batchsize = 250
+epoch = int(sys.argv[1])
 train_generator = generator(train_samples, batchsize)
 validation_generator = generator(validation_samples, batchsize)
 
-epoch = 20
+print("Number of train samples: %dx2 = %d" % (len(train_samples), num_tsamples))
+print("Number of validation samples: %dx2 = %d"% (len(validation_samples),
+      num_vsamples))
+print("Samples/epoch: ", num_tsamples)
+print("Batch size: %d, epoch: %d" % (num_tsamples, epoch))
 
-exec_model = nvidia_net(0.5, lrate=0.0007)
+exec_model = nvidia_net(0.2, lrate=0.0005)
 
-print("Samples/epoch: ", len(train_samples))
+
 history_obj = exec_model.fit_generator(train_generator,
-                                       samples_per_epoch=len(train_samples),
+                                       samples_per_epoch=num_tsamples,
                                        validation_data=validation_generator,
-                                       nb_val_samples=len(validation_samples),
+                                       nb_val_samples=num_vsamples,
                                        nb_epoch=epoch)
 
-modelname = "model_" + modelname + "_e" + str(epoch) + "_b" + str(batchsize) + "_" + time.strftime("%Y%m%d_%H%M") + ".h5"
+modelname = "model_" + modelname + "_e" + str(epoch) + "_b" + str(batchsize) \
+            + "_" + time.strftime("%Y%m%d_%H%M") + ".h5"
 exec_model.save(modelname)  # creates a HDF5 file 'my_model.h5'
 print("Model saved in ", modelname)
 
