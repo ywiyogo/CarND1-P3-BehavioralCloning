@@ -11,7 +11,7 @@ import pickle
 import time
 from sklearn.utils import shuffle
 from os.path import isfile
-from helper_functions import show_histogram, get_relative_path, plot_history
+from helper_functions import get_relative_path
 from sklearn.model_selection import train_test_split
 from keras.layers import Dense, Flatten, Cropping2D, Convolution2D
 from keras.layers import MaxPooling2D, Dropout, Lambda
@@ -204,19 +204,19 @@ def image_net(dropout_rate):
 # Output: a new steering angle for the car.
 print("Collected dataset: ", len(lines))
 # cut the samples to 14000
-train_samples, validation_samples = train_test_split(lines, test_size=0.3)
+train_samples, validation_samples = train_test_split(lines, test_size=0.25)
 
 print("Number of train samples: ", len(train_samples))
 print("Number of validation samples: ", len(validation_samples))
 # 5767 / 79 = 73
 # 7024
-batchsize = 250
+batchsize = 320
 train_generator = generator(train_samples, batchsize)
 validation_generator = generator(validation_samples, batchsize)
 
-epoch = 10
+epoch = 30
 
-exec_model = nvidia_net(0.5, lrate=0.0002)
+exec_model = nvidia_net(0.5, lrate=0.0007)
 
 print("Samples/epoch: ", len(train_samples))
 history_obj = exec_model.fit_generator(train_generator,
@@ -234,9 +234,3 @@ hist_data = history_obj.history
 fname_hist = "hist_" + modelname + ".p"
 pickle.dump(hist_data, open(fname_hist, "wb"))
 
-if isfile(fname_hist):
-    print("History data found")
-    with open(fname_hist, 'rb') as f:
-        h_data = pickle.load(f)
-        # Show history
-        plot_history(h_data)

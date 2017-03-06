@@ -20,10 +20,15 @@ def get_relative_path(abs_path):
     return "../p3_training_data/IMG/" + filename
 
 def plot_history(history):
-    plt.plot(history['loss'])
-    plt.plot(history['val_loss'])
-    plt.title('Model History')
-    plt.ylabel('MSE loss')
-    plt.xlabel('epoch')
-    plt.legend(['training', 'validation'], loc='upper right')
+    fig_hist = plt.figure(figsize=(15, 8))
+    ax = fig_hist.add_subplot(1, 1, 1)
+    ax.plot(np.array(history['loss']))
+    ax.plot(np.array(history['val_loss']))
+    ax.set_title('Model History')
+    ax.set_ylabel('MSE loss')
+    ax.set_xlabel('epoch')
+    ax.set_xticks(np.arange(1,len(history['loss'])+1))
+    print(history["loss"])
+    ax.set_xticklabels(np.arange(1,len(history['loss'])+1))
+    ax.legend(['training', 'validation'], loc='upper right')
     plt.show()
