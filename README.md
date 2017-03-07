@@ -1,6 +1,17 @@
 # Project 3: Use Deep Learning to Clone Driving Behavior
 
-### Solution Design Approach
+[//]: # (Image References)
+
+[image1]: ./examples/overfitting_e12_b230_s11918.png "Model Visualization"
+[image2]: ./examples/overfitting_e15_b92_s10580.png "Grayscaling"
+[image3]: ./examples/T1_MSE_e8_v30_b250.png "MSE validation 30"
+[image4]: ./examples/T1_MSE_e7_v35_b250.png "MSE validation 35"
+[image5]: ./examples/T1_MSE_e10_v35_b250.png "MSE validation 35"
+[image6]: ./examples/T1_MSE_e10_v40_b250.png "MSE validation 40"
+[image7]: ./examples/center_2017_02_27_23_31_47_738.jpg "Center Image"
+[image8]: ./examples/flipped_img.png "Flipped Image"
+
+## Solution Design Approach
 
 The overall strategy for deriving a model architecture was to obtain less loss value and validation loss value
 
@@ -34,7 +45,7 @@ The final step was to run the simulator to see how good the vehicle can drive ar
 
 At the end of the process, the vehicle is able to drive autonomously around the track 1 and a half of the track 2 without leaving the road.
 
-### Final Model Architecture
+## Final Model Architecture
 
 The final model architecture (model.py lines 110-134) consisted of a convolution neural network with the following layers, layer sizes, and strides
 
@@ -56,7 +67,7 @@ I modify the full connected layer of the original Nvidia model. Instead of densi
 |9|10| 
 |10|1| 
 
-### Creation of the Training Set & Training Process
+## Creation of the Training Set & Training Process
 
 To capture good driving behavior, I first recorded two laps on track one using center lane driving. Here is an example image of center lane driving:
 
