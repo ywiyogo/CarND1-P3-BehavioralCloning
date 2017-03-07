@@ -1,102 +1,78 @@
 # Project 3: Use Deep Learning to Clone Driving Behavior
 
-[![Udacity - Self-Driving Car NanoDegree](https://s3.amazonaws.com/udacity-sdc/github/shield-carnd.svg)](http://www.udacity.com/drive)
+### Solution Design Approach
 
-Overview
----
-To meet specifications, the project will require submitting four files: 
-* model.py (script used to create and train the model)
-* drive.py (script to drive the car - feel free to modify this file)
-* model.h5 (a trained Keras model)
-* a report writeup file (either markdown or pdf)
+The overall strategy for deriving a model architecture was to obtain less loss value and validation loss value
 
-Optionally, a video of your vehicle's performance can also be submitted with the project although this is optional. This README file describes how to output the video in the "Details About Files In This Directory" section.
+My first step was to try a simple fully connected network. Then, I uses a convolution neural network model similar to the [imageNet model](http://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks.pdf). I thought this model might be appropriate because it has the highest accuracy for the classification case. After my this experiment, the model consumes a lot of resources and very slow because of the high number of the convolution filter (more than 200).
+
+The project description refers also to the [end-to-end learning convolution network](https://images.nvidia.com/content/tegra/automotive/images/2016/solutions/pdf/end-to-end-dl-using-px.pdf) from NVIDIA autonomous car team. It showed me a better and more stable result than my previous simple model and the simplified ImageNet model. Thus, I started to tune the parameter of this NVIDIA convolution model.
+
+My experiments show that changing the stride from 1 to 2 (or 2 to 1) and the filter size from 5x5 to 9x9 does not result a big difference in the resulting MSE loss.
+
+To combat the overfitting, first I try to visualize the loss and the validation loss from the model by saving the keras model result as pickle data. Each time the model finishs the training, I visualize those value and decide if I need to try the model on the simulator or I just need to tune the paramaters. 
+
+Afterwards, I experimented the model by increasing/lowering the batch size and the learning rate to reduce the overfitting. The number of epoch depends on these both parameters to avoid the overfitting. Compared to the second project which I used high numbers of epoch, in this project I observed that mostly I need a range between 5 and 10.
+
+| Learning rate 0.001, batch size 230 | Learning rate 0.0008, batch size 32 |
+|:----:|:----:|
+| ![alt text][image1] | ![alt text][image2]|
+
+My several experiments show that the vehicle will not drive properly if the difference between the MSE loss value of the training and the validation set is larger than approximately 0.04
+
+| Validation 30% | Validation 35% | 
+| :----: | :----: | 
+| ![alt text][image3] | ![alt text][image4] |
+
+| Validation 35% | Validation 40% | 
+| :----: | :----: | 
+| ![alt text][image5] | ![alt text][image6] |
+
+After I collected more than 11000 samples, I can observe that the overfitting happens normally after 5th epoch. Several experiments shows me that the `shuffle` function plays a significant role in this case.
+
+The final step was to run the simulator to see how good the vehicle can drive around track one. There were a few spots where the vehicle fell off the track, I record new training data on that spot where the vehicle stuck or fell off the track.
+
+At the end of the process, the vehicle is able to drive autonomously around the track 1 and a half of the track 2 without leaving the road.
+
+### Final Model Architecture
+
+The final model architecture (model.py lines 110-134) consisted of a convolution neural network with the following layers, layer sizes, and strides
+
+| Conv. Layers | Number of Filter| Filter size | Stride |
+| :----:|:----:|:----:|:----:|
+|1|24| 5x5|(2, 2)|
+|2|36| 5x5|(2, 2)|
+|3|48| 5x5|(2, 2)|
+|4|64| 3x3|(1, 1)|
+|5|64| 3x3|(1, 1)|
+
+I modify the full connected layer of the original Nvidia model. Instead of densing the size to 1164 neurons, I dense to 500 neurons. The other parameter stay the same. Thus, please refer to the [Nvidia model](https://images.nvidia.com/content/tegra/automotive/images/2016/solutions/pdf/end-to-end-dl-using-px.pdf)
+
+| FC Layers | Neurons |
+| :----:| :----:|
+|6|500| 
+|7|100| 
+|8|50| 
+|9|10| 
+|10|1| 
+
+### Creation of the Training Set & Training Process
+
+To capture good driving behavior, I first recorded two laps on track one using center lane driving. Here is an example image of center lane driving:
+
+![image center][image7]
+
+I then recorded the vehicle recovering from the left side and right sides of the road back to center so that the vehicle would learn to drive back to the center of the road. Then I repeated this process on track two in order to get more data points.
+
+To augment the data set, I also flipped the images and the angles, thinking that this would generalize the learning. For example, here is an image that has then been flipped:
+
+![alt text][image8]
+
+I used also the images from the side cameras in order to get more data which steering angle is not zero.
+
+After the collection process, I had 13098 number of data lines in CSV. Then, I randomly shuffled the data set and put 35% of the data into a validation set. 
+
+I do not preprocess the images so intensive. The input images are cropped by the Keras platform with these parameter (top:50, bottom:20), (left: 10, right:10).
 
 
-The Project
----
-The goals / steps of this project are the following:
-* Use the simulator to collect data of good driving behavior 
-* Design, train and validate a model that predicts a steering angle from image data
-* Use the model to drive the vehicle autonomously around the first track in the simulator. The vehicle should remain on the road for an entire loop around the track.
-* Summarize the results with a written report
-
-### Dependencies
-This lab requires:
-
-* [CarND Term1 Starter Kit](https://github.com/udacity/CarND-Term1-Starter-Kit)
-
-The lab enviroment can be created with CarND Term1 Starter Kit. Click [here](https://github.com/udacity/CarND-Term1-Starter-Kit/blob/master/README.md) for the details.
-
-The following resources can be found in this github repository:
-* drive.py
-* video.py
-* writeup_template.md
-
-The simulator can be downloaded from the classroom. In the classroom, we have also provided sample data that you can optionally use to help train your model.
-
-## Details About Files In This Directory
-
-### `drive.py`
-
-Usage of `drive.py` requires you have saved the trained model as an h5 file, i.e. `model.h5`. See the [Keras documentation](https://keras.io/getting-started/faq/#how-can-i-save-a-keras-model) for how to create this file using the following command:
-```sh
-model.save(filepath)
-```
-
-Once the model has been saved, it can be used with drive.py using this command:
-
-```sh
-python drive.py model.h5
-```
-
-The above command will load the trained model and use the model to make predictions on individual images in real-time and send the predicted angle back to the server via a websocket connection.
-
-Note: There is known local system's setting issue with replacing "," with "." when using drive.py. When this happens it can make predicted steering values clipped to max/min values. If this occurs, a known fix for this is to add "export LANG=en_US.utf8" to the bashrc file.
-
-#### Saving a video of the autonomous agent
-
-```sh
-python drive.py model.h5 run1
-```
-
-The fourth argument `run1` is the directory to save the images seen by the agent to. If the directory already exists it'll be overwritten.
-
-```sh
-ls run1
-
-[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_424.jpg
-[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_451.jpg
-[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_477.jpg
-[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_528.jpg
-[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_573.jpg
-[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_618.jpg
-[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_697.jpg
-[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_723.jpg
-[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_749.jpg
-[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_817.jpg
-...
-```
-
-The image file name is a timestamp when the image image was seen. This information is used by `video.py` to create a chronological video of the agent driving.
-
-### `video.py`
-
-```sh
-python video.py run1
-```
-
-Create a video based on images found in the `run1` directory. The name of the video will be name of the directory following by `'.mp4'`, so, in this case the video will be `run1.mp4`.
-
-Optionally one can specify the FPS (frames per second) of the video:
-
-```sh
-python video.py run1 --fps 48
-```
-
-The video will run at 48 FPS. The default FPS is 60.
-
-#### Why create a video
-
-1. It's been noted the simulator might perform differently based on the hardware. So if your model drives succesfully on your machine it might not on another machine (your reviewer). Saving a video is a solid backup in case this happens.
-2. You could slightly alter the code in `drive.py` and/or `video.py` to create a video of what your model sees after the image is processed (may be helpful for debugging).
+I used this training data for training the model. The validation set helped determine if the model was over or under fitting. The ideal number of epochs was 7 as evidenced by the above plot. I used an adam optimizer and I found out that 0.0005 was the ideal value aftertuning the learning rate.
