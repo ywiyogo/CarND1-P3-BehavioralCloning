@@ -123,6 +123,7 @@ def nvidia_net(dropout_rate, lrate=0.001):
     model.add(Convolution2D(64, 3, 3, subsample=(1, 1), border_mode='valid',
                             activation="relu"))
     model.add(Flatten())
+    model.add(Dense(1164, activation='relu'))
     model.add(Dropout(dropout_rate))
     model.add(Dense(500, activation='relu'))
     model.add(Dense(100, activation='relu'))
@@ -168,7 +169,6 @@ def image_net(dropout_rate):
 
     # FC
     model.add(Flatten())
-    # model.add(Dense(7000))
     model.add(Dense(700))
     model.add(Dropout(dropout_rate))
     model.add(Dense(50))
@@ -189,12 +189,12 @@ with open(csv_file) as file:
         lines.append(line)
 
 print("Collected cvs dataset: ", len(lines))
-train_samples, validation_samples = train_test_split(lines, test_size=0.35)
+train_samples, validation_samples = train_test_split(lines, test_size=0.20)
 # My strategy is to generate each line with 2 samples
 num_tsamples = len(train_samples)
 num_vsamples = len(validation_samples)
-batchsize = 250
-epoch = int(sys.argv[1])
+batchsize = 200
+epoch = int(sys.argv[1] if len(sys.argv) > 1 else 5)
 train_generator = generator(train_samples, batchsize)
 validation_generator = generator(validation_samples, batchsize)
 
@@ -204,7 +204,7 @@ print("Number of validation samples: %dx2 = %d" % (len(validation_samples),
 print("Samples/epoch: ", num_tsamples)
 print("Batch size: %d, epoch: %d" % (num_tsamples, epoch))
 
-exec_model = nvidia_net(0.2, lrate=0.0005)
+exec_model = nvidia_net(0.4, lrate=0.0005)
 
 # Run the Keras model with generator
 history_obj = exec_model.fit_generator(train_generator,
