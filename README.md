@@ -12,7 +12,6 @@
 [image8]: ./examples/flipped_img.png "Flipped Image"
 [image9]: ./examples/T1_final_modelMSE.png "Final model MSE"
 [image10]: ./examples/overborder1.png "Not drivable surface 1"
-[image11]: ./examples/overborder2.png "Not drivable surface 2"
 
 ## Solution Design Approach
 
@@ -48,9 +47,7 @@ The final step was to run the simulator to see how good the vehicle can drive ar
 
 However, the above model does not generate an acceptable result, since the vehicle can drive pop up onto ledges or over any surfaces that would otherwise be considered unsafe (see below figures). The simulation result was rejected.
 
-| Not Drivable Surface 1| Not Drivable Surface 2| 
-| :----: | :----: | 
-| ![alt text][image10] | ![alt text][image11] |
+| ![alt text][image10] 
 
 Since more data sets did not provide me a better result in the simulation, I was starting to collect the data again. After I collected about 12131 samples, I observed a better result with the same model. There was some bad recording situation in my previous data sets.
 
@@ -105,6 +102,6 @@ Based on my experiment, a good recording data sets are more significant than  th
 
 ## How to start the simulation
 
-1. Merge the model.h5.7z.001 and model.h5.7z.002 containing a trained convolution neural network to model.h5
+1. Merge the model.h5.7z.001, model.h5.7z.002, model.h5.7z.002 containing a trained convolution neural network to model.h5
 2. Activate the conda environment `source activate carnd-term1`
 3. Run python `drive.py model.h5`

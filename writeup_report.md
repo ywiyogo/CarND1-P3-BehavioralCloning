@@ -40,7 +40,7 @@ My project includes the following files:
 * drive.py for driving the car in autonomous mode
 * helper_function.py containing the helper functions
 * viewer.py for visualizing the history object of the Keras model
-* model.h5.7z.001 and model.h5.7z.002 containing a trained convolution neural network. The size of model.h5 is 116 MB, thus I need to split it so that I can push it to github
+* model.h5.7z.001, model.h5.7z.002 and model.h5.7z.003 containing a trained convolution neural network. The size of model.h5 is 116 MB, thus I need to split it so that I can push it to github
 * writeup_report.md summarizing the results
 * video.mp4 containing the vidoeof the final result
 
