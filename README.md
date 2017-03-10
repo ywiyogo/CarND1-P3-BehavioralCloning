@@ -102,6 +102,6 @@ Based on my experiment, a good recording data sets are more significant than  th
 
 ## How to start the simulation
 
-1. Merge the model.h5.7z.001, model.h5.7z.002, model.h5.7z.002 containing a trained convolution neural network to model.h5
+1. Merge the model.h5.7z.001, model.h5.7z.002, model.h5.7z.003 containing a trained convolution neural network to model.h5
 2. Activate the conda environment `source activate carnd-term1`
 3. Run python `drive.py model.h5`
